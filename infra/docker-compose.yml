@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   db:
     image: postgres:16-alpine
@@ -6,11 +5,40 @@ services:
       POSTGRES_USER: dev
       POSTGRES_PASSWORD: dev
       POSTGRES_DB: age_token
-    volumes: [ "pgdata:/var/lib/postgresql/data" ]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
   api:
-    build: ../backend
-    environment:
-      DATABASE_URL: postgresql+psycopg2://dev:dev@db/age_token
-    ports: [ "8000:8000" ]
-    depends_on: [ db ]
-volumes: { pgdata: {} }
+    build: ../backend              # Dockerfile lives in backend/
+    env_file:
+      - ../.env                    # must now include CHAIN_RPC_URL,
+                                   # BULLETIN_ADDRESS and PRIVATE_KEY
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    # run Alembic migrations, then start Uvicorn
+    command: >
+      /bin/sh -c "
+        alembic upgrade head &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000
+      "
+
+  # optional: tiny side-car that pushes the nightly revocation root
+  revoker:
+    build: ../backend              # reuse the same image
+    env_file:
+      - ../.env
+    entrypoint: ["python", "-m", "app.jobs", "update_revocation_root"]
+    depends_on:
+      - api
+    restart: unless-stopped
+    # run once every 24 h (Docker cron-ish)
+    deploy:
+      restart_policy:
+        condition: any
+      # 86400 s = 24 h
+      replicas: 1
+
+volumes:
+  pgdata: {}
