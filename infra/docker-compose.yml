@@ -1,0 +1,16 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: age_token
+    volumes: [ "pgdata:/var/lib/postgresql/data" ]
+  api:
+    build: ../backend
+    environment:
+      DATABASE_URL: postgresql+psycopg2://dev:dev@db/age_token
+    ports: [ "8000:8000" ]
+    depends_on: [ db ]
+volumes: { pgdata: {} }

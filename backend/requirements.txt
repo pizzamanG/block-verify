@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+sqlmodel
+jwcrypto
+py_webauthn
+python-jose[cryptography]
+web3
+python-dotenv
