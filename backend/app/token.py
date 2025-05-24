@@ -8,7 +8,7 @@ if os.path.exists(settings.ISSUER_KEY_FILE):
 else:
     _key = jwk.JWK.generate(kty='OKP', crv='Ed25519')
     open(settings.ISSUER_KEY_FILE,'w').write(_key.export())
-_kid = _key.thumbprint().decode()
+_kid = _key.thumbprint()
 def mint(device_hash: str) -> str:
     exp = datetime.utcnow() + timedelta(days=365)
     claims = {"ageOver":18,"device":device_hash,

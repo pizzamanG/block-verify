@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stub Age‑Check</title>
+  <style>
+    body{font-family:sans-serif;max-width:420px;margin:4rem auto;padding:1rem;border:1px solid #ccc;border-radius:1rem}
+    #log{white-space:pre-wrap;background:#f5f5f5;border-radius:.5rem;padding:.5rem;margin-top:1rem;font-size:.85rem}
+  </style>
+</head>
+<body>
+  <h1>Age verification&nbsp;— dev stub</h1>
+  <form id="kycForm">
+    <label>Select an ID image (anything, we just test the flow)</label><br />
+    <input type="file" id="idPhoto" accept="image/*" required />
+    <button type="submit">Upload & verify</button>
+  </form>
+  <pre id="log"></pre>
+
+<script>
+const API = "http://localhost:8000";  // adjust if proxying
+const log = m => (document.getElementById('log').textContent += m + "\n");
+
+// Helper to convert ArrayBuffers → base64url so we can JSON‑stringify the cred
+const buf2url = buf => btoa(String.fromCharCode(...new Uint8Array(buf)))
+                      .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+
+// Flatten WebAuthn credential into pure JSON (RFC 7637)
+function serializeCred(cred){
+  return {
+    id: cred.id,
+    rawId: buf2url(cred.rawId),
+    type: cred.type,
+    response: {
+      clientDataJSON: buf2url(cred.response.clientDataJSON),
+      attestationObject: buf2url(cred.response.attestationObject)
+    }
+  };
+}
+
+document.getElementById('kycForm').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const file = document.getElementById('idPhoto').files[0];
+  if (!file) return alert('Pick a file first');
+
+  const fd = new FormData();
+  fd.append('file', file);
+  log('→ Uploading to /fake/verify …');
+
+  const kyc = await fetch(`${API}/fake/verify`, {method:'POST', body:fd});
+  if (!kyc.ok) { log('✖ KYC rejected (25% stub)'); return; }
+  const options = await kyc.json();
+  options.challenge = Uint8Array.from(atob(options.challenge), c => c.charCodeAt(0));
+
+  log('→ Calling navigator.credentials.create() …');
+  const cred = await navigator.credentials.create({publicKey: options});
+  if (!cred) { log('✖ User canceled WebAuthn'); return; }
+
+  log('→ Sending attestation to /webauthn/register …');
+  const reg = await fetch(`${API}/webauthn/register`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(serializeCred(cred))
+  });
+  if (!reg.ok) { log('✖ Register failed'); return; }
+  log('✔ Token issued & cookie set. You can now visit any protected page.');
+});
+</script>
+</body>
+</html>

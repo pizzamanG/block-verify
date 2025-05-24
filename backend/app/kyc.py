@@ -9,4 +9,5 @@ async def kyc_webhook(payload: dict):
     dob = datetime.fromisoformat(payload["dob"])
     if (datetime.utcnow()-dob).days < 18*365:
         raise HTTPException(400,"Under-age")
-    return registration_challenge(payload["session_id"]).dict()
+    return registration_challenge(payload["session_id"])
+

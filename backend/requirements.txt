@@ -1,8 +1,22 @@
-fastapi
-uvicorn[standard]
-sqlmodel
-jwcrypto
-py_webauthn
-python-jose[cryptography]
-web3
-python-dotenv
+# ── core API stack ────────────────────────────
+fastapi==0.115.2
+uvicorn[standard]==0.34.2
+sqlmodel==0.0.24
+alembic==1.16.1
+SQLAlchemy-Utils==0.41.2
+
+# ── crypto / identity ─────────────────────────
+jwcrypto==1.5.6
+python-jose[cryptography]==3.4.0
+py_webauthn==0.0.4
+webauthn==2.5.2
+python-multipart==0.0.20
+
+# ── blockchain layer ──────────────────────────
+web3==7.12.0              # ← NO “[pycryptodome]” extra
+pycryptodome==3.23.0      # provides the Keccak backend for eth-hash
+
+# ── misc utilities ────────────────────────────
+python-dotenv==1.1.0
+pydantic-settings==2.9.1
+
