@@ -19,4 +19,5 @@ pycryptodome==3.23.0      # provides the Keccak backend for eth-hash
 # ── misc utilities ────────────────────────────
 python-dotenv==1.1.0
 pydantic-settings==2.9.1
+psycopg2-binary
 
