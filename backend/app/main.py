@@ -13,8 +13,11 @@ from .kyc_stub import router as stub_router      # local‑dev 75 / 25 fake 
 
 from .webauthn import verify_attestation
 from .token import mint
+from .verify import router as verify_router
 
 app = FastAPI(title="Age‑Token API")
+app.include_router(verify_router, tags=["verify"])
+from fastapi.responses import FileResponse
 
 app.add_middleware(
     CORSMiddleware,
@@ -62,3 +65,8 @@ async def jwks():
 
 from .db import engine, SQLModel
 SQLModel.metadata.create_all(engine)
+
+
+@app.get("/", include_in_schema=False)
+def serve_landing():
+    return FileResponse("app/landing.html")
