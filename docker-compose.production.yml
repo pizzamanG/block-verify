@@ -1,0 +1,128 @@
+version: '3.8'
+
+services:
+  # BlockVerify API Service
+  blockverify-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://blockverify:${DB_PASSWORD}@postgres:5432/blockverify
+      - CHAIN_RPC_URL=${CHAIN_RPC_URL}
+      - PRIVATE_KEY=${PRIVATE_KEY}
+      - BULLETIN_ADDRESS=${BULLETIN_ADDRESS}
+      - ISSUER_KEY_FILE=/app/keys/issuer_ed25519.jwk
+    volumes:
+      - ./keys:/app/keys:ro
+      - ./frontend:/app/frontend:ro
+    depends_on:
+      - postgres
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - blockverify-network
+
+  # Demo Adult Site
+  demo-adult-site:
+    build:
+      context: ./demo_adult_site
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - BLOCKVERIFY_API_URL=http://blockverify-api:8000
+    depends_on:
+      - blockverify-api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - blockverify-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=blockverify
+      - POSTGRES_USER=blockverify
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U blockverify"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - blockverify-network
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - blockverify-network
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - blockverify-api
+      - demo-adult-site
+    restart: unless-stopped
+    networks:
+      - blockverify-network
+
+  # Monitoring (Prometheus + Grafana)
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+    restart: unless-stopped
+    networks:
+      - blockverify-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+
+networks:
+  blockverify-network:
+    driver: bridge 
