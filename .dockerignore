@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+*.egg-info/
+
+# Development
+.git/
+.gitignore
+README.md
+*.md
+.env
+.env.local
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+demo_adult_site/
+docs/
+test_*.py
+demo_*.py
+run_local_demo.py
+LOCAL_DEMO.md
+docker-compose*.yml
+backend/Dockerfile* 
