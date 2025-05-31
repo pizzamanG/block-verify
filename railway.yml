@@ -1,0 +1,15 @@
+version: "2"
+
+build:
+  buildCommand: pip install -r backend/requirements.txt
+  startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+
+environments:
+  production:
+    variables:
+      DATABASE_URL: ${{Postgres.DATABASE_URL}}
+      CHAIN_RPC_URL: https://rpc-amoy.polygon.technology
+      BULLETIN_ADDRESS: "0x1234567890123456789012345678901234567890"
+      ISSUER_KEY_FILE: "/app/issuer_ed25519.jwk"
+      ENVIRONMENT: "production"
+      LOG_LEVEL: "INFO" 

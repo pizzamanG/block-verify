@@ -184,10 +184,76 @@ async def home():
                 <li>✅ Full regulatory compliance</li>
             </ul>
         </div>
+
+        <div class="privacy-info" style="border-color: #ff6b6b;">
+            <h3>🎛️ Token Management</h3>
+            <p>Manage your age verification for this device:</p>
+            <div style="margin: 1rem 0;">
+                <div id="tokenStatus" style="padding: 1rem; background: #333; border-radius: 8px; margin-bottom: 1rem;">
+                    <strong>Status:</strong> <span id="verificationStatus">Checking...</span><br>
+                    <small id="tokenDetails"></small>
+                </div>
+                <button onclick="clearMyToken()" class="btn" style="background: #f44336; margin-right: 1rem;">
+                    🗑️ Clear My Verification
+                </button>
+                <button onclick="window.BlockVerify.checkAge()" class="btn" style="background: #2196F3;">
+                    🔄 Refresh Status
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- BlockVerify Integration - PRODUCTION MODE -->
     <script src="http://localhost:8000/static/at-simple.js"></script>
+
+    <script>
+        function clearMyToken() {{
+            if (confirm('Are you sure you want to clear your age verification? You will need to verify again to access adult content.')) {{
+                // Clear all storage
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                // Clear cookies
+                document.cookie.split(";").forEach(function(c) {{ 
+                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/;domain=localhost"); 
+                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+                }});
+                
+                alert('✅ Age verification cleared! This page will reload.');
+                window.location.reload();
+            }}
+        }}
+
+        function updateTokenStatus() {{
+            const token = localStorage.getItem('AgeToken') || 
+                        document.cookie.split('; ').find(row => row.startsWith('AgeToken='))?.split('=')[1];
+            
+            const statusEl = document.getElementById('verificationStatus');
+            const detailsEl = document.getElementById('tokenDetails');
+            
+            if (token) {{
+                try {{
+                    const decoded = JSON.parse(atob(token));
+                    const expires = new Date(decoded.exp * 1000);
+                    const isExpired = Date.now() / 1000 > decoded.exp;
+                    
+                    statusEl.innerHTML = isExpired ? 
+                        '<span style="color: #f44336;">❌ Expired</span>' : 
+                        '<span style="color: #4CAF50;">✅ Verified</span>';
+                    detailsEl.innerHTML = `Device ID: ${{decoded.device.substring(0, 16)}}...<br>Expires: ${{expires.toLocaleString()}}`;
+                }} catch(e) {{
+                    statusEl.innerHTML = '<span style="color: #f44336;">❌ Invalid Token</span>';
+                    detailsEl.innerHTML = 'Token format error';
+                }}
+            }} else {{
+                statusEl.innerHTML = '<span style="color: #ff6b6b;">❌ Not Verified</span>';
+                detailsEl.innerHTML = 'No verification token found';
+            }}
+        }}
+
+        // Update status when page loads
+        setTimeout(updateTokenStatus, 2000);
+    </script>
 </body>
 </html>
 """

@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: blockverify-api
+    runtime: python3
+    plan: free
+    buildCommand: cd backend && pip install -r requirements.txt
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: CHAIN_RPC_URL
+        value: https://rpc-amoy.polygon.technology
+      - key: BULLETIN_ADDRESS
+        value: "0x1234567890123456789012345678901234567890"
+      - key: ISSUER_KEY_FILE
+        value: "/opt/render/project/src/backend/issuer_ed25519.jwk"
+      - key: ENVIRONMENT
+        value: "production"
+      - key: LOG_LEVEL
+        value: "INFO"
+
+databases:
+  - name: blockverify-db
+    plan: free
+    databaseName: blockverify 

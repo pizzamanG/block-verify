@@ -1,0 +1,12 @@
+version: "2"
+
+build:
+  buildCommand: npm install
+  startCommand: npm start
+
+environments:
+  production:
+    variables:
+      NODE_ENV: "production"
+      BLOCKVERIFY_API_URL: ${{BlockVerify-API.RAILWAY_STATIC_URL}}
+      PORT: ${{PORT}} 

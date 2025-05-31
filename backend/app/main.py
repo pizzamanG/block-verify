@@ -13,15 +13,43 @@ from .kyc import router as kyc_router            # real vendor webhook (placehol
 from .kyc_stub import router as stub_router      # local‑dev 75 / 25 fake KYC
 from .verifier_onboarding import router as verifier_router
 from .revocation import router as revocation_router
+from .admin import router as admin_router
+from .api_clients import router as clients_router
+from .verify_with_billing import router as verify_billing_router
+
+# Import billing router with error handling
+try:
+    from .api_billing import router as billing_router
+    BILLING_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️  Stripe billing not available: {e}")
+    billing_router = None
+    BILLING_AVAILABLE = False
 
 from .webauthn import verify_attestation
 from .token import mint
 from .verify import router as verify_router
 
-app = FastAPI(title="Age‑Token API")
-app.include_router(verify_router, tags=["verify"])
+app = FastAPI(
+    title="BlockVerify API", 
+    version="1.0.0",
+    description="Privacy-preserving age verification platform"
+)
+
+# Include routers
+app.include_router(verify_router, tags=["verify"])  # Legacy verification endpoints
+app.include_router(verify_billing_router, tags=["verification"])  # New billing-integrated endpoints
+app.include_router(clients_router, tags=["clients"])  # Client management
 app.include_router(verifier_router, prefix="/verifiers", tags=["verifiers"])
 app.include_router(revocation_router, prefix="/revocation", tags=["revocation"])
+app.include_router(admin_router, tags=["admin"])
+
+# Only include Stripe billing routes if available
+if BILLING_AVAILABLE and billing_router:
+    app.include_router(billing_router, prefix="/billing", tags=["billing"])
+    print("✅ Stripe billing system enabled")
+else:
+    print("📦 Running with simple billing (no Stripe required)")
 
 # Serve static files (client library, dashboard, etc.)
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
@@ -43,9 +71,16 @@ app.include_router(stub_router, prefix="/fake", tags=["stub"])
 # ensure schema
 SQLModel.metadata.create_all(engine)
 
+# Also create simple billing tables
+from .billing_simple import Base as BillingBase, engine as billing_engine
+BillingBase.metadata.create_all(bind=billing_engine)
+
 @app.on_event("startup")
-async def create_demo_verifier():
-    """Create a demo verifier for testing"""
+async def startup_event():
+    """Initialize the application"""
+    print("🚀 BlockVerify API starting up...")
+    
+    # Create demo verifier for testing
     with DBSession() as session:
         existing = session.query(Verifier).filter(
             Verifier.api_key == sha256("demo_key_for_testing".encode()).hexdigest()
@@ -63,6 +98,30 @@ async def create_demo_verifier():
             session.add(demo_verifier)
             session.commit()
             print("✅ Created demo verifier for testing")
+    
+    # Create demo client for simple billing
+    from .billing_simple import SessionLocal, SimpleClient, SimpleBillingService
+    with SessionLocal() as session:
+        existing = session.query(SimpleClient).filter(
+            SimpleClient.contact_email == "demo@blockverify.com"
+        ).first()
+        
+        if not existing:
+            from .billing_simple import ClientRegister
+            billing_service = SimpleBillingService(session)
+            demo_data = ClientRegister(
+                business_name="BlockVerify Demo",
+                contact_email="demo@blockverify.com",
+                website_url="https://demo.blockverify.com"
+            )
+            try:
+                client, api_key = billing_service.register_client(demo_data)
+                print(f"✅ Created demo client with API key: {api_key}")
+                print("   Save this key for testing!")
+            except Exception as e:
+                print(f"Demo client creation skipped: {e}")
+    
+    print("✅ BlockVerify API ready!")
 
 @app.post("/webauthn/register")
 async def webauthn_register(resp: dict):
@@ -104,9 +163,6 @@ async def jwks():
         return {"error": "Issuer key not found", "path": str(key_path)}
     except Exception as e:
         return {"error": str(e)}
-
-from .db import engine, SQLModel
-SQLModel.metadata.create_all(engine)
 
 @app.get("/dashboard.html", include_in_schema=False)
 def serve_dashboard():

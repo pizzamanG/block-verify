@@ -45,16 +45,29 @@
         // Try localStorage
         const localToken = localStorage.getItem('AgeToken');
         
+        // Debug all storage locations
+        log('🔍 [DEBUG] Storage check:', {
+            cookieToken: cookieToken ? cookieToken.substring(0, 20) + '...' : 'NONE',
+            accessToken: accessToken ? accessToken.substring(0, 20) + '...' : 'NONE', 
+            localToken: localToken ? localToken.substring(0, 20) + '...' : 'NONE',
+            allCookies: document.cookie,
+            localStorage: localStorage.length + ' items'
+        });
+        
         const token = cookieToken || accessToken || localToken;
         
         if (token) {
-            log('✅ Token found', { length: token.length });
+            log('✅ Token found', { 
+                source: cookieToken ? 'cookie' : accessToken ? 'accessCookie' : 'localStorage',
+                length: token.length 
+            });
             // Store in localStorage if not there
             if (!localToken && token) {
                 localStorage.setItem('AgeToken', token);
+                log('💾 Synced token to localStorage');
             }
         } else {
-            log('❌ No token found');
+            log('❌ No token found in any location');
         }
         
         return token;
@@ -62,15 +75,71 @@
     
     function decodeToken(token) {
         try {
-            log('🔓 Decoding token...');
-            const decoded = JSON.parse(atob(token));
-            log('✅ Token decoded', {
-                ageOver: decoded.ageOver,
-                expires: new Date(decoded.exp * 1000).toLocaleString()
-            });
-            return decoded;
+            log('🔓 Decoding JWT token...');
+            log('🔍 Raw token length:', token.length);
+            log('🔍 First 50 chars:', token.substring(0, 50));
+            log('🔍 Last 50 chars:', token.substring(token.length - 50));
+            
+            // Check if it's a JWT (has 3 parts separated by dots)
+            const parts = token.split('.');
+            log('🔍 Token parts count:', parts.length);
+            
+            if (parts.length === 3) {
+                // It's a JWT - decode the payload (middle part)
+                let payload = parts[1];
+                log('🔍 Raw payload:', payload);
+                log('🔍 Raw payload length:', payload.length);
+                
+                // Convert base64url to base64 (JWT uses base64url encoding)
+                payload = payload.replace(/-/g, '+').replace(/_/g, '/');
+                log('🔍 After base64url conversion:', payload);
+                
+                // Add padding if needed for base64 decoding
+                const paddedPayload = payload + '='.repeat((4 - payload.length % 4) % 4);
+                log('🔍 After padding:', paddedPayload);
+                log('🔍 Padded length:', paddedPayload.length);
+                
+                // Check for invalid characters
+                const validBase64 = /^[A-Za-z0-9+/=]*$/.test(paddedPayload);
+                log('🔍 Valid base64 format:', validBase64);
+                
+                if (!validBase64) {
+                    log('❌ Invalid base64 characters detected');
+                    log('🔍 Invalid chars:', paddedPayload.match(/[^A-Za-z0-9+/=]/g));
+                    return null;
+                }
+                
+                const decoded = JSON.parse(atob(paddedPayload));
+                
+                log('✅ JWT token decoded', {
+                    age_over: decoded.age_over,
+                    expires: new Date(decoded.exp * 1000).toLocaleString(),
+                    issuer: decoded.iss
+                });
+                
+                // Convert JWT format to legacy format for compatibility
+                return {
+                    ageOver: decoded.age_over,
+                    exp: decoded.exp,
+                    iat: decoded.iat,
+                    device: decoded.sub, // Subject is the device ID in our JWT
+                    iss: decoded.iss,
+                    aud: decoded.aud
+                };
+            } else {
+                // Legacy base64 format
+                log('🔓 Decoding legacy base64 token...');
+                const decoded = JSON.parse(atob(token));
+                log('✅ Legacy token decoded', {
+                    ageOver: decoded.ageOver,
+                    expires: new Date(decoded.exp * 1000).toLocaleString()
+                });
+                return decoded;
+            }
         } catch (e) {
-            log('❌ Token decode failed', e.message);
+            log('❌ Token decode failed:', e.name, e.message);
+            log('🔍 Error details:', e.stack);
+            log('🔍 Token that failed:', token);
             return null;
         }
     }
@@ -276,12 +345,13 @@
             return;
         }
         
-        // Check age
-        if (tokenData.ageOver >= 18) {
-            log('✅ Access granted');
+        // Check age - handle both JWT (age_over) and legacy (ageOver) formats
+        const ageValue = tokenData.age_over || tokenData.ageOver;
+        if (ageValue >= 18) {
+            log('✅ Access granted', { age: ageValue });
             showContent();
         } else {
-            log('❌ Not old enough - showing prompt');
+            log('❌ Not old enough - showing prompt', { age: ageValue });
             showVerificationPrompt();
         }
     }

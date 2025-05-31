@@ -1,7 +1,11 @@
 from sqlmodel import SQLModel, create_engine, Session
 from .settings import settings
 
-engine = create_engine(settings.DATABASE_URL, echo=False, pool_pre_ping=True)
+# Handle SQLite for local development
+if settings.DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(settings.DATABASE_URL, echo=False, connect_args={"check_same_thread": False})
+else:
+    engine = create_engine(settings.DATABASE_URL, echo=False, pool_pre_ping=True)
 
 class DBSession:
     def __enter__(self): self.session = Session(engine); return self.session

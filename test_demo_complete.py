@@ -135,8 +135,9 @@ def main():
     print("2️⃣  Full Flow - Complete verification process")
     print("3️⃣  Clear Tokens - Reset everything for fresh testing")
     print("4️⃣  Manual Test - Just open the site and test manually")
+    print("5️⃣  🔗 Blockchain Demo - Full flow + push thumbprint to Polygon Amoy")
     
-    choice = input("\nSelect option (1-4): ").strip()
+    choice = input("\nSelect option (1-5): ").strip()
     
     if choice == "1":
         print("\n🎯 QUICK TEST")
@@ -180,6 +181,21 @@ def main():
         print("=" * 50)
         webbrowser.open('http://localhost:3000')
         print("✅ Site opened for manual testing!")
+    
+    elif choice == "5":
+        print("\n🎯 BLOCKCHAIN DEMO")
+        print("=" * 50)
+        print("📝 This will demonstrate the full flow of the blockchain integration.")
+        print("   1. Visit adult site (content hidden)")
+        print("   2. Redirect to verification page")
+        print("   3. Upload ID document")
+        print("   4. Complete device registration")
+        print("   5. Push thumbprint to Polygon Amoy")
+        print()
+        clear_tokens_browser()
+        time.sleep(2)
+        webbrowser.open('http://localhost:3000')
+        print("✅ Browser opened! Follow the verification flow.")
     
     else:
         print("❌ Invalid choice")

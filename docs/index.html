@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlockVerify - Privacy-Preserving Age Verification</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            padding: 60px 0;
+        }
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        .cdn-section {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 30px;
+            margin: 40px 0;
+            backdrop-filter: blur(10px);
+        }
+        .code-block {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+        code {
+            color: #ffd700;
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+        .btn {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            margin: 10px;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+        .feature {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+        }
+        .feature h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 BlockVerify</h1>
+            <p>Privacy-preserving, trust-minimized age verification for websites</p>
+            <a href="#cdn" class="btn">Get Started</a>
+            <a href="https://github.com/yourusername/blockverify" class="btn">GitHub</a>
+        </div>
+
+        <div class="features">
+            <div class="feature">
+                <h3>🛡️ Privacy First</h3>
+                <p>No personal data stored or transmitted. Users verify once and get a device-bound token.</p>
+            </div>
+            <div class="feature">
+                <h3>⚡ Easy Integration</h3>
+                <p>One script tag and your site has enterprise-grade age verification.</p>
+            </div>
+            <div class="feature">
+                <h3>🔗 Blockchain Secured</h3>
+                <p>Cryptographically verified tokens with on-chain integrity checks.</p>
+            </div>
+        </div>
+
+        <div id="cdn" class="cdn-section">
+            <h2>🚀 Quick Integration</h2>
+            <p>Add BlockVerify to your website with just one script tag:</p>
+            
+            <div class="code-block">
+                <code>&lt;!-- Latest version from jsDelivr CDN --&gt;<br>
+&lt;script src="https://cdn.jsdelivr.net/gh/yourusername/blockverify@main/client_sdk/blockverify.min.js"&gt;&lt;/script&gt;<br><br>
+&lt;!-- Initialize with your API key --&gt;<br>
+&lt;script&gt;<br>
+&nbsp;&nbsp;BlockVerify.init({<br>
+&nbsp;&nbsp;&nbsp;&nbsp;apiKey: 'bv_prod_your_key_here',<br>
+&nbsp;&nbsp;&nbsp;&nbsp;minAge: 18,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;onSuccess: (result) =&gt; console.log('User verified', result),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;onFailure: (error) =&gt; console.log('Verification failed', error)<br>
+&nbsp;&nbsp;});<br>
+&lt;/script&gt;</code>
+            </div>
+
+            <h3>Alternative CDN Options</h3>
+            <div class="code-block">
+                <code>&lt;!-- From unpkg --&gt;<br>
+&lt;script src="https://unpkg.com/blockverify-sdk@latest/dist/blockverify.min.js"&gt;&lt;/script&gt;<br><br>
+&lt;!-- From our CDN (coming soon) --&gt;<br>
+&lt;script src="https://cdn.blockverify.com/v2/blockverify.min.js"&gt;&lt;/script&gt;</code>
+            </div>
+        </div>
+
+        <div class="cdn-section">
+            <h2>📖 Documentation</h2>
+            <p>Complete integration guide and API reference:</p>
+            <a href="docs/integration.html" class="btn">Integration Guide</a>
+            <a href="docs/api.html" class="btn">API Reference</a>
+            <a href="demo/" class="btn">Live Demo</a>
+        </div>
+    </div>
+</body>
+</html> 
