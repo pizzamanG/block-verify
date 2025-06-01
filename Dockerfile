@@ -31,4 +31,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/api/v1/health || exit 1
 
 # Start command - Railway will inject PORT env var
-CMD uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000} 
+CMD ["/bin/sh", "-c", "uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000}"] 
