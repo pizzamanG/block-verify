@@ -1,5 +1,13 @@
 # Railway Deployment Guide
 
+## Simplified Deployment (No Shell Scripts!)
+
+Following Railway's best practices:
+- No `cd` commands
+- No wrapper scripts
+- Direct uvicorn execution
+- Clean Docker setup
+
 ## Environment Variables Required
 
 Set these in your Railway service settings:
@@ -22,22 +30,37 @@ LOG_LEVEL=INFO
 
 ## Deployment Steps
 
-1. **Push to GitHub**
+1. **Clear Railway Cache** (if you had previous failed deployments)
+   - In Railway dashboard, go to your service
+   - Settings → Redeploy → "Clear build cache"
+
+2. **Push to GitHub**
    ```bash
    git add .
-   git commit -m "Railway deployment ready"
+   git commit -m "Railway deployment - simplified approach"
    git push origin main
    ```
 
-2. **In Railway Dashboard**
+3. **In Railway Dashboard**
    - Your PostgreSQL database should already be deployed ✅
-   - The API service should now build with the new Dockerfile
+   - The API service should now build with the simplified Dockerfile
    - Set the environment variables above in the service settings
 
-3. **Verify Deployment**
+4. **Verify Deployment**
    - Check build logs for any errors
-   - Visit your API URL: `https://your-app.up.railway.app/api/v1/health`
-   - Admin dashboard: `https://your-app.up.railway.app/admin/dashboard`
+   - Visit your Railway URL to see the landing page
+   - Test the health endpoint: `https://your-app.railway.app/api/v1/health`
+
+## What Changed
+- Removed all wrapper scripts
+- Using direct uvicorn command in Dockerfile
+- Proper exec form with sh -c for environment variable expansion
+- No directory changes or complex shell operations
+
+## Troubleshooting
+- If you see "cd not found" errors, clear the build cache
+- Railway automatically sets the PORT environment variable
+- The app will default to port 8000 if PORT is not set
 
 ## Common Issues
 

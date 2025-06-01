@@ -5,7 +5,7 @@ echo "🔍 Validating Railway deployment setup..."
 
 # Check if all required files exist
 echo -e "\n📁 Checking required files:"
-files=("Dockerfile" "railway_start.py" "backend/requirements.txt" "issuer_ed25519.jwk")
+files=("Dockerfile" "backend/requirements.txt" "issuer_ed25519.jwk" "backend/app/main.py")
 all_good=true
 
 for file in "${files[@]}"; do
@@ -17,21 +17,23 @@ for file in "${files[@]}"; do
     fi
 done
 
-# Check if start.sh is executable
-if [ -x "start.sh" ]; then
-    echo "✅ start.sh is executable"
+# Check Dockerfile content
+echo -e "\n🐳 Checking Dockerfile:"
+if grep -q "CMD.*uvicorn" Dockerfile; then
+    echo "✅ Dockerfile has uvicorn CMD"
 else
-    echo "⚠️  start.sh is not executable, fixing..."
-    chmod +x start.sh
+    echo "❌ Dockerfile missing uvicorn CMD"
+    all_good=false
 fi
 
 echo -e "\n📋 Summary:"
 if [ "$all_good" = true ]; then
     echo "✅ All checks passed! Ready to deploy to Railway."
     echo -e "\n🚀 Next steps:"
-    echo "1. git add ."
-    echo "2. git commit -m 'Fixed Railway deployment'"
-    echo "3. git push origin main"
+    echo "1. Clear Railway build cache (if needed)"
+    echo "2. git add ."
+    echo "3. git commit -m 'Railway deployment - simplified approach'"
+    echo "4. git push origin main"
 else
     echo "❌ Some files are missing. Please fix before deploying."
 fi 
