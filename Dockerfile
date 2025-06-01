@@ -16,10 +16,7 @@ COPY backend/ backend/
 COPY frontend/ frontend/
 COPY client_sdk/ client_sdk/
 COPY issuer_ed25519.jwk .
-COPY start.sh .
-
-# Make start script executable
-RUN chmod +x start.sh
+COPY railway_start.py .
 
 # Create landing page
 COPY backend/app/landing.html backend/app/
@@ -34,5 +31,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/api/v1/health || exit 1
 
-# Start command
-CMD ["./start.sh"] 
+# Start command - using Python which Railway handles better
+CMD ["python", "railway_start.py"] 

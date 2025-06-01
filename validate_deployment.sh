@@ -5,7 +5,7 @@ echo "🔍 Validating Railway deployment setup..."
 
 # Check if all required files exist
 echo -e "\n📁 Checking required files:"
-files=("Dockerfile" "start.sh" "backend/requirements.txt" "issuer_ed25519.jwk")
+files=("Dockerfile" "railway_start.py" "backend/requirements.txt" "issuer_ed25519.jwk")
 all_good=true
 
 for file in "${files[@]}"; do
@@ -30,8 +30,8 @@ if [ "$all_good" = true ]; then
     echo "✅ All checks passed! Ready to deploy to Railway."
     echo -e "\n🚀 Next steps:"
     echo "1. git add ."
-    echo "2. git commit -m 'Fix Railway deployment with start script'"
+    echo "2. git commit -m 'Fixed Railway deployment'"
     echo "3. git push origin main"
 else
-    echo "❌ Some issues found. Fix them before deploying."
+    echo "❌ Some files are missing. Please fix before deploying."
 fi 
