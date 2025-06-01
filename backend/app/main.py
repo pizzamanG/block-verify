@@ -72,8 +72,8 @@ app.include_router(stub_router, prefix="/fake", tags=["stub"])
 SQLModel.metadata.create_all(engine)
 
 # Also create simple billing tables
-from .billing_simple import Base as BillingBase, engine as billing_engine
-BillingBase.metadata.create_all(bind=billing_engine)
+from .billing_simple import Base as BillingBase, engine as billing_engine, create_tables
+create_tables()
 
 @app.on_event("startup")
 async def startup_event():

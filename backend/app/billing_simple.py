@@ -331,4 +331,8 @@ class SimpleBillingService:
         }
 
 # Create tables
-Base.metadata.create_all(bind=engine) 
+# Base.metadata.create_all(bind=engine)  # Moved to create_tables() function
+
+def create_tables():
+    """Create billing tables - call this from main.py startup"""
+    Base.metadata.create_all(bind=engine) 
