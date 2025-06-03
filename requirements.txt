@@ -14,12 +14,19 @@ python-multipart==0.0.6
 web3==6.11.3
 eth-account==0.10.0
 
-# Optional: Billing System (Stripe integration)
-# Uncomment the line below to enable billing features:
-# stripe==7.8.0
+# B2B Portal & Billing System
+stripe==7.8.0
+jinja2==3.1.2
+python-jose[cryptography]==3.3.0
 
-# Optional: Performance Monitoring
-# psutil==5.9.6
+# API Management & Rate Limiting
+redis==5.0.1
+python-dotenv==1.0.0
+slowapi==0.1.9
+
+# Analytics & Monitoring
+geoip2==4.7.0
+user-agents==2.2.0
 
 # Development/Testing
 pytest==7.4.3
@@ -27,9 +34,6 @@ httpx==0.25.2
 requests==2.31.0
 colorama==0.4.6
 
-# Additional dependencies for production
-redis==5.0.1
-python-dotenv==1.0.0
-slowapi==0.1.9
-geoip2==4.7.0
-user-agents==2.2.0 
+# Additional production dependencies
+aiofiles==23.2.1
+python-dateutil==2.8.2 
