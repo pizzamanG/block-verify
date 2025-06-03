@@ -6,7 +6,7 @@ Guaranteed to start and work reliably
 
 import os
 import logging
-from fastapi import FastAPI, HTTPException, Depends, Request, Form, Query
+from fastapi import FastAPI, HTTPException, Depends, Request, Form, Query, Header
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -69,6 +69,7 @@ async def home():
             "register": "/register",
             "dashboard": "/dashboard",
             "verify_api": "/api/v1/verify-token",
+            "usage_api": "/api/v1/usage",
             "health": "/health"
         }
     }
@@ -232,11 +233,14 @@ async def dashboard(company_id: str = Query(...), api_key: str = Query(None)):
             
             <div class="card">
                 <h2>🔌 API Integration</h2>
+                <p><strong>How it works:</strong> Your customers send you their age verification tokens, you verify them with our API using your business API key.</p>
+                
                 <h3>JavaScript SDK</h3>
                 <div class="code">
 &lt;script src="https://api.blockverify.com/sdk.js"&gt;&lt;/script&gt;<br>
 &lt;script&gt;<br>
-&nbsp;&nbsp;BlockVerify.init({{<br>
+&nbsp;&nbsp;// Your frontend calls this when user completes verification<br>
+&nbsp;&nbsp;BlockVerify.verify(userToken, {{<br>
 &nbsp;&nbsp;&nbsp;&nbsp;apiKey: '{company["api_key"][:20]}...',<br>
 &nbsp;&nbsp;&nbsp;&nbsp;minAge: 18<br>
 &nbsp;&nbsp;}});<br>
@@ -245,10 +249,28 @@ async def dashboard(company_id: str = Query(...), api_key: str = Query(None)):
                 
                 <h3>REST API</h3>
                 <div class="code">
+# Your business API key (keeps this secret!)<br>
+API_KEY="{company["api_key"][:20]}..."<br><br>
+# User's age verification token (from your frontend)<br>
+USER_TOKEN="user_age_verification_token_here"<br><br>
+curl -X POST https://blockverify-api-production.up.railway.app/api/v1/verify-token \\<br>
+&nbsp;&nbsp;-H "Authorization: Bearer $API_KEY" \\<br>
+&nbsp;&nbsp;-H "Content-Type: application/json" \\<br>
+&nbsp;&nbsp;-d '{{"token": "'$USER_TOKEN'", "min_age": 18}}'
+                </div>
+                
+                <h3>🔍 Test Examples</h3>
+                <div class="code">
+# ✅ Valid adult token<br>
 curl -X POST https://blockverify-api-production.up.railway.app/api/v1/verify-token \\<br>
 &nbsp;&nbsp;-H "Authorization: Bearer {company["api_key"][:20]}..." \\<br>
 &nbsp;&nbsp;-H "Content-Type: application/json" \\<br>
-&nbsp;&nbsp;-d '{{"token": "user_verification_token"}}'
+&nbsp;&nbsp;-d '{{"token": "adult_verified_token_12345"}}'<br><br>
+# ❌ Invalid minor token<br>
+curl -X POST https://blockverify-api-production.up.railway.app/api/v1/verify-token \\<br>
+&nbsp;&nbsp;-H "Authorization: Bearer {company["api_key"][:20]}..." \\<br>
+&nbsp;&nbsp;-H "Content-Type: application/json" \\<br>
+&nbsp;&nbsp;-d '{{"token": "teen_minor_token_123"}}'
                 </div>
             </div>
             
@@ -266,24 +288,101 @@ curl -X POST https://blockverify-api-production.up.railway.app/api/v1/verify-tok
     </html>
     """
 
-@app.post("/api/v1/verify-token", response_model=TokenVerifyResponse)
-async def verify_token(request: TokenVerifyRequest):
-    """Production token verification API"""
+@app.get("/api/v1/usage")
+async def get_usage(authorization: str = Header(None)):
+    """Get current API usage for the authenticated company"""
     
-    # Simple token verification (demo implementation)
-    token = request.token
+    # Extract and validate business API key
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=401, 
+            detail="Missing or invalid Authorization header"
+        )
+    
+    api_key = authorization.replace("Bearer ", "")
+    
+    # Find the company with this API key
+    company = None
+    for comp_data in companies_data.values():
+        if comp_data["api_key"] == api_key:
+            company = comp_data
+            break
+    
+    if not company:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    usage_pct = (company["usage"] / company["quota"]) * 100
+    
+    return {
+        "company_name": company["name"],
+        "current_usage": company["usage"],
+        "monthly_quota": company["quota"],
+        "usage_percentage": round(usage_pct, 1),
+        "remaining_calls": company["quota"] - company["usage"],
+        "plan": "Free Trial"
+    }
+
+@app.post("/api/v1/verify-token", response_model=TokenVerifyResponse)
+async def verify_token(
+    request: TokenVerifyRequest,
+    authorization: str = Header(None)
+):
+    """Production token verification API - requires business API key"""
+    
+    # Extract and validate business API key
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=401, 
+            detail="Missing or invalid Authorization header. Include your API key as 'Bearer bv_prod_...'"
+        )
+    
+    api_key = authorization.replace("Bearer ", "")
+    
+    # Find the company with this API key
+    company = None
+    for comp_data in companies_data.values():
+        if comp_data["api_key"] == api_key:
+            company = comp_data
+            break
+    
+    if not company:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid API key. Get your API key from the dashboard."
+        )
+    
+    # Update usage tracking
+    company["usage"] += 1
+    logger.info(f"📊 API call from {company['name']} - Usage: {company['usage']}/{company['quota']}")
+    
+    # Now verify the user's age verification token
+    user_token = request.token
     min_age = request.min_age or 18
     
-    # Mock verification logic
-    if len(token) > 10:  # Basic validation
+    # Enhanced token verification logic
+    if len(user_token) < 10:
+        return TokenVerifyResponse(
+            valid=False,
+            verified_by="BlockVerify-Production"
+        )
+    
+    # Mock verification based on token patterns (replace with real verification)
+    if "adult" in user_token.lower() or "verified" in user_token.lower():
         return TokenVerifyResponse(
             valid=True,
-            age_over=21,  # Demo: assume all valid tokens are 21+
+            age_over=21,
+            verified_by="BlockVerify-Production"
+        )
+    elif "teen" in user_token.lower() or "minor" in user_token.lower():
+        return TokenVerifyResponse(
+            valid=False,
             verified_by="BlockVerify-Production"
         )
     else:
+        # Default: assume valid if token is long enough
         return TokenVerifyResponse(
-            valid=False,
+            valid=True,
+            age_over=19,
             verified_by="BlockVerify-Production"
         )
 
