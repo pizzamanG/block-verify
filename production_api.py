@@ -33,6 +33,8 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 import geoip2.database
 import user_agents
+from usage_tracker import UsageTracker
+from email_service import create_notification_service
 
 load_dotenv()
 
@@ -272,7 +274,7 @@ async def track_api_usage(
     background_tasks: BackgroundTasks,
     db: Session
 ):
-    """Track API usage for billing and analytics"""
+    """Track API usage for billing and analytics with smart notifications"""
     
     def _track_usage():
         try:
@@ -302,6 +304,16 @@ async def track_api_usage(
             )
             
             db.add(usage)
+            
+            # Update company usage counter
+            company = db.query(Company).filter(Company.id == company_id).first()
+            if company:
+                company.current_usage += 1
+                
+                # Check for notification triggers
+                usage_tracker = UsageTracker(db)
+                usage_tracker._check_usage_alerts(company)
+            
             db.commit()
             
             # Update Redis counters for real-time analytics

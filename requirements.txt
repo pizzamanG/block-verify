@@ -10,6 +10,10 @@ jwcrypto==1.5.0
 webauthn==1.11.1
 python-multipart==0.0.6
 
+# JWT Libraries (both needed)
+PyJWT==2.8.0
+python-jose[cryptography]==3.3.0
+
 # Blockchain dependencies
 web3==6.11.3
 eth-account==0.10.0
@@ -17,7 +21,6 @@ eth-account==0.10.0
 # B2B Portal & Billing System
 stripe==7.8.0
 jinja2==3.1.2
-python-jose[cryptography]==3.3.0
 
 # API Management & Rate Limiting
 redis==5.0.1
