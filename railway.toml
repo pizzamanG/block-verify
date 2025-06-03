@@ -1,3 +1,4 @@
+# Railway configuration for full B2B system
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile.full"
