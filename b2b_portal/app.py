@@ -120,7 +120,7 @@ class BillingEvent(Base):
     amount_cents = Column(Integer, nullable=True)
     currency = Column(String, default="usd")
     timestamp = Column(DateTime, default=datetime.utcnow)
-    metadata = Column(Text, nullable=True)  # JSON data
+    event_data = Column(Text, nullable=True)  # JSON data (renamed from metadata)
     
     __table_args__ = (
         Index('idx_company_timestamp', 'company_id', 'timestamp'),
