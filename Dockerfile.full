@@ -1,20 +1,33 @@
-# Super Simple Railway Test
+# BlockVerify Full B2B Production System
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install minimal dependencies
-RUN pip install fastapi uvicorn
+# Install system dependencies including curl for health checks
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy just the test file
-COPY simple_test.py .
+# Copy requirements first for better caching
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the complete application
+COPY . .
+
+# Create necessary directories
+RUN mkdir -p b2b_portal/static frontend
+
+# Set Python path
+ENV PYTHONPATH=/app
 
 # Expose port
 EXPOSE 8000
 
-# Simple health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+# Health check for Railway
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Start the simple test app
-CMD ["python", "simple_test.py"] 
+# Start the complete B2B portal with all features
+CMD ["uvicorn", "b2b_portal.app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"] 
