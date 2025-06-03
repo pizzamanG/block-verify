@@ -103,11 +103,11 @@ class APIUsage(Base):
     ip_address = Column(String, nullable=True)
     country = Column(String, nullable=True)  # For analytics
     
-    # Partitioning-ready indexes
+    # Partitioning-ready indexes (unique names per table)
     __table_args__ = (
-        Index('idx_company_timestamp', 'company_id', 'timestamp'),
-        Index('idx_api_key_timestamp', 'api_key_id', 'timestamp'),
-        Index('idx_timestamp', 'timestamp'),  # For cleanup jobs
+        Index('idx_usage_company_timestamp', 'company_id', 'timestamp'),
+        Index('idx_usage_api_key_timestamp', 'api_key_id', 'timestamp'),
+        Index('idx_usage_timestamp', 'timestamp'),  # For cleanup jobs
     )
 
 class BillingEvent(Base):
@@ -123,8 +123,8 @@ class BillingEvent(Base):
     event_data = Column(Text, nullable=True)  # JSON data (renamed from metadata)
     
     __table_args__ = (
-        Index('idx_company_timestamp', 'company_id', 'timestamp'),
-        Index('idx_stripe_event', 'stripe_event_id'),
+        Index('idx_billing_company_timestamp', 'company_id', 'timestamp'),
+        Index('idx_billing_stripe_event', 'stripe_event_id'),
     )
 
 # Create tables
