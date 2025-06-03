@@ -1,33 +1,20 @@
-# BlockVerify Full B2B System - Force rebuild
+# Super Simple Railway Test
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+# Install minimal dependencies
+RUN pip install fastapi uvicorn
 
-# Copy requirements and install all dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy the full application
-COPY . .
-
-# Create static directories if they don't exist
-RUN mkdir -p b2b_portal/static frontend
-
-# Set Python path
-ENV PYTHONPATH=/app
+# Copy just the test file
+COPY simple_test.py .
 
 # Expose port
 EXPOSE 8000
 
-# Health check
+# Simple health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Start the minimal B2B portal (guaranteed to work)
-CMD ["python", "minimal_b2b.py"] 
+# Start the simple test app
+CMD ["python", "simple_test.py"] 
