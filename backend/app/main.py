@@ -36,6 +36,28 @@ app = FastAPI(
     description="Privacy-preserving age verification platform"
 )
 
+# Health check endpoint for Railway
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Railway deployment"""
+    try:
+        # Test database connection
+        with DBSession() as session:
+            session.execute("SELECT 1")
+        
+        return {
+            "status": "healthy",
+            "service": "blockverify-api",
+            "timestamp": datetime.utcnow().isoformat(),
+            "version": "1.0.0"
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
 # Include routers
 app.include_router(verify_router, tags=["verify"])  # Legacy verification endpoints
 app.include_router(verify_billing_router, tags=["verification"])  # New billing-integrated endpoints

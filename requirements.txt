@@ -27,3 +27,9 @@ httpx==0.25.2
 requests==2.31.0
 colorama==0.4.6
 
+# Additional dependencies for production
+redis==5.0.1
+python-dotenv==1.0.0
+slowapi==0.1.9
+geoip2==4.7.0
+user-agents==2.2.0 

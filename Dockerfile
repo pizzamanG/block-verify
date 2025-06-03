@@ -4,32 +4,32 @@ WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
+    build-essential \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy backend requirements and install
-COPY backend/requirements.txt backend/
-RUN pip install --no-cache-dir -r backend/requirements.txt
+# Copy requirements first for better caching
+COPY requirements.txt .
 
-# Copy all application code
-COPY backend/ backend/
-COPY frontend/ frontend/
-COPY client_sdk/ client_sdk/
-COPY issuer_ed25519.jwk .
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Create landing page
-COPY backend/app/landing.html backend/app/
+# Copy the entire project
+COPY . .
 
-# Set Python path
-ENV PYTHONPATH=/app
+# Copy issuer key to the expected location
+COPY backend/issuer_ed25519.jwk .
 
-# Expose port (Railway will override this)
+# Create non-root user
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
+
+# Expose port (Railway will set this via $PORT)
 EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/api/v1/health || exit 1
+    CMD curl -f http://localhost:8000/health || exit 1
 
-# Start command - using uvicorn directly
-# Railway sets PORT env var, we use sh -c to expand it properly
+# Start command - Railway will override this with the one in railway.toml
 CMD ["sh", "-c", "uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000}"] 

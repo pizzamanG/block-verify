@@ -37,7 +37,7 @@ LOG_LEVEL=INFO
 2. **Push to GitHub**
    ```bash
    git add .
-   git commit -m "Railway deployment - simplified approach"
+   git commit -m "Railway deployment - complete dependencies"
    git push origin main
    ```
 
@@ -56,9 +56,16 @@ LOG_LEVEL=INFO
 - Using direct uvicorn command in Dockerfile
 - Proper exec form with sh -c for environment variable expansion
 - No directory changes or complex shell operations
+- Complete requirements.txt with all dependencies
+
+## Dependency Notes
+- All Python dependencies are in `backend/requirements.txt`
+- Blockchain support requires `web3` and `eth-account`
+- Stripe is optional and won't break deployment if missing
 
 ## Troubleshooting
 - If you see "cd not found" errors, clear the build cache
+- If you see "ModuleNotFoundError", check backend/requirements.txt
 - Railway automatically sets the PORT environment variable
 - The app will default to port 8000 if PORT is not set
 
