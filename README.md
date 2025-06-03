@@ -276,4 +276,5 @@ MIT License - see LICENSE file for details
 
 ---
 
+
 **Built with privacy and trust minimization in mind** 🔐
