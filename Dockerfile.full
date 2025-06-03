@@ -28,5 +28,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Start the simple standalone API (no database required)
-CMD ["python", "simple_standalone.py"] 
+# Start the full B2B portal with all features
+CMD ["uvicorn", "b2b_portal.app:app", "--host", "0.0.0.0", "--port", "8000"] 
