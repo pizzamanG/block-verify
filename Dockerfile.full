@@ -1,4 +1,4 @@
-# BlockVerify Full B2B Production System
+# BlockVerify Full B2B Production System - BUILD 2025-06-03
 FROM python:3.11-slim
 
 WORKDIR /app
