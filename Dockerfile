@@ -20,6 +20,10 @@ COPY . .
 # Copy issuer key to the expected location
 COPY backend/issuer_ed25519.jwk .
 
+# Copy and make startup script executable
+COPY start.sh .
+RUN chmod +x start.sh
+
 # Create non-root user
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
@@ -31,5 +35,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Start command - Railway will override this with the one in railway.toml
-CMD ["sh", "-c", "uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000}"] 
+# Use the startup script
+CMD ["./start.sh"] 
