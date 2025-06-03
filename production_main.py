@@ -621,8 +621,8 @@ curl -X POST https://blockverify-api-production.up.railway.app/api/v1/verify-tok
 async def user_verification_page(return_url: str = Query(None)):
     """User-facing age verification page where people upload their IDs"""
     
-    # Use the return URL or default to the demo site
-    return_url = return_url or "https://blockverify-api-production.up.railway.app/demo"
+    # Use the provided return URL or a generic message
+    return_url = return_url or "https://example.com"
     
     return f"""
     <!DOCTYPE html>
@@ -694,12 +694,25 @@ async def user_verification_page(return_url: str = Query(None)):
             .status.success {{ background: #4CAF50; display: block; }}
             .status.error {{ background: #f44336; display: block; }}
             .status.info {{ background: #2196F3; display: block; }}
+            .return-info {{
+                background: rgba(255,255,255,0.1);
+                padding: 1rem;
+                border-radius: 8px;
+                margin: 1rem 0;
+                font-family: monospace;
+                font-size: 0.9rem;
+            }}
         </style>
     </head>
     <body>
         <div class="container">
             <h1>🔐 BlockVerify Age Verification</h1>
             <p>Secure, private age verification for adult content access</p>
+            
+            <div class="return-info">
+                <strong>🔄 Return URL:</strong><br>
+                <code>{return_url}</code>
+            </div>
             
             <div class="step">
                 <h3>Step 1: Upload ID Document</h3>
@@ -769,16 +782,31 @@ async def user_verification_page(return_url: str = Query(None)):
                     // Generate a demo token
                     const token = 'adult_verified_token_' + Date.now();
                     
-                    // Store token
+                    // Store token in multiple locations for cross-origin access
                     localStorage.setItem('AgeToken', token);
-                    document.cookie = `AgeToken=${{token}}; path=/; max-age=86400`;
+                    document.cookie = `AgeToken=${{token}}; path=/; max-age=86400; SameSite=None; Secure`;
+                    
+                    // Also try domain-specific storage
+                    try {{
+                        localStorage.setItem('BlockVerifyToken', token);
+                        sessionStorage.setItem('AgeToken', token);
+                    }} catch(e) {{
+                        console.log('Storage limitation:', e);
+                    }}
                     
                     showStatus('verifyStatus', '✅ Age verified successfully!', 'success');
                     document.getElementById('successMessage').style.display = 'block';
                     
+                    console.log('🔐 [BlockVerify] Token generated:', token);
+                    console.log('🔄 [BlockVerify] Redirecting to:', returnUrl);
+                    
                     // Redirect back
                     setTimeout(() => {{
-                        window.location.href = returnUrl + (returnUrl.includes('?') ? '&' : '?') + 'verified=true';
+                        if (returnUrl && returnUrl !== 'https://example.com') {{
+                            window.location.href = returnUrl + (returnUrl.includes('?') ? '&' : '?') + 'verified=true&token=' + encodeURIComponent(token);
+                        }} else {{
+                            alert('✅ Age verification complete!\\n\\nToken: ' + token.substring(0, 30) + '...\\n\\nIn a real integration, you would be redirected back to the adult site.');
+                        }}
                     }}, 2000);
                 }}, 2000);
             }}
