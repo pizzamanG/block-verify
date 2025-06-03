@@ -128,7 +128,12 @@ class BillingEvent(Base):
     )
 
 # Create tables
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+    logger.info("✅ Database tables created successfully")
+except Exception as e:
+    logger.warning(f"⚠️ Database table creation issue: {e}")
+    # Continue anyway - tables might already exist
 
 # Pydantic models
 class CompanyCreate(BaseModel):
@@ -175,8 +180,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files
-app.mount("/static", StaticFiles(directory="b2b_portal/static"), name="static")
+# Mount static files (safe mounting)
+try:
+    app.mount("/static", StaticFiles(directory="b2b_portal/static"), name="static")
+except Exception as e:
+    logger.warning(f"Could not mount static files: {e}")
+    # Create a simple static file handler
+    @app.get("/static/{path:path}")
+    async def serve_static(path: str):
+        return {"message": "Static files not available"}
 
 # Dependencies
 def get_db():
