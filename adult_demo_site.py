@@ -14,7 +14,7 @@ import uvicorn
 app = FastAPI(title="Adult Demo Site", version="1.0.0")
 
 # Your real API key - in production, store this as an environment variable
-BLOCKVERIFY_API_KEY = "bv_prod_bx0Ifc2PmikCmwFzi6JBHrLWj3oCPzpkrnCj0JVkfWs"
+BLOCKVERIFY_API_KEY = "bv_prod_wuz0o51nqHDGgMuhqf4ZbEXeEJmNlDX94qYSyOKOu48"
 BLOCKVERIFY_API_URL = "https://blockverify-api-production.up.railway.app"
 
 class TokenVerifyRequest(BaseModel):
@@ -248,7 +248,7 @@ async def adult_site(verified: str = Query(None)):
                 <p>Please wait while we validate your credentials with BlockVerify...</p>
                 <div class="dev-info" style="margin-top: 20px;">
                     <p><strong>🔧 Real API Integration:</strong> Using production BlockVerify API</p>
-                    <p><strong>API Key:</strong> bv_prod_bx0...{BLOCKVERIFY_API_KEY[-10:]}</p>
+                    <p><strong>API Key:</strong> {BLOCKVERIFY_API_KEY[:20]}... (production)</p>
                     <p><strong>Endpoint:</strong> {BLOCKVERIFY_API_URL}/api/v1/verify-token</p>
                 </div>
             </div>
@@ -271,7 +271,7 @@ async def adult_site(verified: str = Query(None)):
                     <p><strong>Integration Method:</strong> BlockVerify JavaScript SDK + Real API</p>
                     <p><strong>API Endpoint:</strong> {BLOCKVERIFY_API_URL}</p>
                     <p><strong>Verification Flow:</strong> User redirects → BlockVerify → Returns with token → Server validates</p>
-                    <p><strong>API Key:</strong> bv_prod_bx0...{BLOCKVERIFY_API_KEY[-10:]} (production)</p>
+                    <p><strong>API Key:</strong> {BLOCKVERIFY_API_KEY[:20]}... (production)</p>
                 </div>
             </div>
 
