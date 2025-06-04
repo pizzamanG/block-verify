@@ -230,6 +230,9 @@ async def register_company(
 ):
     """Handle B2B registration"""
     
+    # Clean domain input - remove any trailing semicolons or special characters
+    domain = domain.strip().rstrip(';').strip()
+    
     # Debug logging
     debug_log("Registration attempt", {
         "company_name": company_name,
@@ -286,38 +289,45 @@ async def dashboard(
 ):
     """Enhanced B2B dashboard with automatic login handling"""
     
-    # If no company_id provided, try to get from session
-    if not company_id:
-        if session_id and session_id in sessions:
-            company_id = sessions[session_id]["company_id"]
-            # Redirect to clean URL with company_id
-            return RedirectResponse(f"/dashboard?company_id={company_id}&tab={tab}", status_code=302)
-        else:
-            # No session, redirect to login
-            return RedirectResponse("/login", status_code=302)
-    
-    # Validate company exists
-    if company_id not in companies_data:
-        # Company not found, redirect to login with error
-        return RedirectResponse("/login?error=Session expired. Please login again.", status_code=302)
-    
-    company = companies_data[company_id]
-    quota_pct = (company["usage"] / company["quota"]) * 100 if company["quota"] > 0 else 0
-    
-    # Generate some demo statistics
-    daily_stats = [
-        {"date": (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d"), 
-         "calls": company["usage"] // 7 + (i * 10)} 
-        for i in range(7, 0, -1)
-    ]
-    
-    return f"""
+    try:
+        # If no company_id provided, try to get from session
+        if not company_id:
+            if session_id and session_id in sessions:
+                company_id = sessions[session_id]["company_id"]
+                # Redirect to clean URL with company_id
+                return RedirectResponse(f"/dashboard?company_id={company_id}&tab={tab}", status_code=302)
+            else:
+                # No session, redirect to login
+                return RedirectResponse("/login", status_code=302)
+        
+        # Validate company exists
+        if company_id not in companies_data:
+            # Company not found, redirect to login with error
+            return RedirectResponse("/login?error=Session expired. Please login again.", status_code=302)
+        
+        company = companies_data[company_id]
+        quota_pct = (company["usage"] / company["quota"]) * 100 if company["quota"] > 0 else 0
+        
+        # Generate some demo statistics
+        daily_stats = [
+            {"date": (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d"), 
+             "calls": company["usage"] // 7 + (i * 10)} 
+            for i in range(7, 0, -1)
+        ]
+        
+        # Escape company data for safe HTML rendering
+        safe_company = {
+            k: str(v).replace('"', '&quot;').replace("'", '&#39;') if isinstance(v, str) else v
+            for k, v in company.items()
+        }
+        
+        return f"""
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>BlockVerify Dashboard - {company["name"]}</title>
+        <title>BlockVerify Dashboard - {safe_company["name"]}</title>
         <style>
             body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; background: #f5f5f5; }}
             .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; }}
@@ -350,7 +360,7 @@ async def dashboard(
     <body>
         <div class="header">
             <h1>🔐 BlockVerify B2B Dashboard</h1>
-            <p>Welcome, {company["name"]} | <a href="/logout" style="color: white;">Logout</a></p>
+            <p>Welcome, {safe_company["name"]} | <a href="/logout" style="color: white;">Logout</a></p>
         </div>
         
         <nav class="nav">
@@ -436,21 +446,21 @@ async def dashboard(
                             <h4 style="color: #16a34a; margin: 0 0 10px 0;">✅ Valid Adults</h4>
                             <div style="font-size: 2rem; font-weight: bold; color: #16a34a;">{int(company["usage"] * 0.85) if company["usage"] > 0 else 0}</div>
                             <div style="color: #16a34a; font-size: 0.9rem; margin-top: 5px;">
-                                {((int(company["usage"] * 0.85) / company["usage"]) * 100):.1f}% of total
+                                {f"{((int(company['usage'] * 0.85) / company['usage']) * 100):.1f}% of total" if company["usage"] > 0 else "0.0% of total"}
                             </div>
                         </div>
                         <div style="background: #fef2f2; border: 1px solid #dc2626; padding: 20px; border-radius: 8px; text-align: center;">
                             <h4 style="color: #dc2626; margin: 0 0 10px 0;">❌ Minors Blocked</h4>
                             <div style="font-size: 2rem; font-weight: bold; color: #dc2626;">{int(company["usage"] * 0.10) if company["usage"] > 0 else 0}</div>
                             <div style="color: #dc2626; font-size: 0.9rem; margin-top: 5px;">
-                                {((int(company["usage"] * 0.10) / company["usage"]) * 100):.1f}% of total
+                                {f"{((int(company['usage'] * 0.10) / company['usage']) * 100):.1f}% of total" if company["usage"] > 0 else "0.0% of total"}
                             </div>
                         </div>
                         <div style="background: #fefce8; border: 1px solid #ca8a04; padding: 20px; border-radius: 8px; text-align: center;">
                             <h4 style="color: #ca8a04; margin: 0 0 10px 0;">⚠️ Invalid Tokens</h4>
                             <div style="font-size: 2rem; font-weight: bold; color: #ca8a04;">{int(company["usage"] * 0.05) if company["usage"] > 0 else 0}</div>
                             <div style="color: #ca8a04; font-size: 0.9rem; margin-top: 5px;">
-                                {((int(company["usage"] * 0.05) / company["usage"]) * 100):.1f}% of total
+                                {f"{((int(company['usage'] * 0.05) / company['usage']) * 100):.1f}% of total" if company["usage"] > 0 else "0.0% of total"}
                             </div>
                         </div>
                     </div>
@@ -598,11 +608,11 @@ curl -X POST https://blockverify-api-production.up.railway.app/api/v1/verify-tok
                     <div style="background: #f0f9ff; border: 1px solid #0ea5e9; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
                         <h4 style="color: #0ea5e9; margin: 0 0 10px 0;">🔍 Debug Info</h4>
                         <div style="font-family: monospace; font-size: 0.9rem; color: #0369a1;">
-                            <div><strong>Company ID:</strong> {company["id"]}</div>
-                            <div><strong>Email:</strong> {company["email"]}</div>
+                            <div><strong>Company ID:</strong> {safe_company["id"]}</div>
+                            <div><strong>Email:</strong> {safe_company["email"]}</div>
                             <div><strong>Password Length:</strong> {len(company.get("password", ""))} characters</div>
-                            <div><strong>Domain:</strong> "{company.get("domain", "")}"</div>
-                            <div><strong>Industry:</strong> {company.get("industry", "")}</div>
+                            <div><strong>Domain:</strong> "{safe_company.get("domain", "")}"</div>
+                            <div><strong>Industry:</strong> {safe_company.get("industry", "")}</div>
                         </div>
                     </div>
                     
@@ -610,15 +620,15 @@ curl -X POST https://blockverify-api-production.up.railway.app/api/v1/verify-tok
                     <form>
                         <div style="margin-bottom: 15px;">
                             <label>Company Name</label><br>
-                            <input type="text" value="{company["name"]}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            <input type="text" value="{safe_company["name"]}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                         </div>
                         <div style="margin-bottom: 15px;">
                             <label>Email</label><br>
-                            <input type="email" value="{company["email"]}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            <input type="email" value="{safe_company["email"]}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                         </div>
                         <div style="margin-bottom: 15px;">
                             <label>Domain</label><br>
-                            <input type="text" value="{company.get("domain", "")}" placeholder="example.com" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            <input type="text" value="{safe_company.get("domain", "")}" placeholder="example.com" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                         </div>
                         <button type="submit" class="btn">Save Changes</button>
                     </form>
@@ -651,7 +661,7 @@ curl -X POST https://blockverify-api-production.up.railway.app/api/v1/verify-tok
             }}
             
             function showFullKey() {{
-                document.getElementById('apiKeyDisplay').textContent = '{company["api_key"]}';
+                document.getElementById('apiKeyDisplay').textContent = '{safe_company["api_key"]}';
             }}
             
             function regenerateKey() {{
@@ -663,6 +673,34 @@ curl -X POST https://blockverify-api-production.up.railway.app/api/v1/verify-tok
     </body>
     </html>
     """
+    
+    except Exception as e:
+        logger.error(f"Dashboard error: {str(e)}")
+        debug_log("Dashboard rendering error", {"error": str(e), "company_id": company_id})
+        
+        # Return a simple error page instead of crashing
+        return HTMLResponse(f"""
+        <html>
+        <head>
+            <title>Dashboard Error</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; padding: 40px; background: #f5f5f5; }}
+                .error {{ background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+                h1 {{ color: #e53e3e; }}
+                .btn {{ background: #667eea; color: white; text-decoration: none; padding: 10px 20px; border-radius: 4px; display: inline-block; margin-top: 20px; }}
+            </style>
+        </head>
+        <body>
+            <div class="error">
+                <h1>Dashboard Error</h1>
+                <p>Sorry, there was an error loading your dashboard.</p>
+                <p><strong>Error:</strong> {str(e)}</p>
+                <a href="/login" class="btn">Back to Login</a>
+                <a href="/debug/companies" class="btn" style="margin-left: 10px;">Debug Info</a>
+            </div>
+        </body>
+        </html>
+        """, status_code=500)
 
 @app.get("/verify", response_class=HTMLResponse)
 async def user_verification_page(return_url: str = Query(None)):
