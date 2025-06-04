@@ -80,29 +80,6 @@ class TokenVerifyResponse(BaseModel):
 
 # Routes
 
-@app.get("/")
-async def home():
-    """B2B Portal Homepage"""
-    return {
-        "service": "BlockVerify Production B2B Platform",
-        "version": "2.0.0",
-        "status": "operational",
-        "features": [
-            "Company Registration",
-            "API Key Management", 
-            "Age Verification API",
-            "Usage Analytics",
-            "Billing Integration"
-        ],
-        "endpoints": {
-            "register": "/register",
-            "dashboard": "/dashboard",
-            "verify_api": "/api/v1/verify-token",
-            "usage_api": "/api/v1/usage",
-            "health": "/health"
-        }
-    }
-
 @app.get("/health")
 async def health_check():
     """Health check - always healthy"""
@@ -277,11 +254,29 @@ async def register_company(
     return RedirectResponse(f"/dashboard?company_id={company_id}&api_key={api_key}", status_code=303)
 
 @app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(company_id: str = Query(...), api_key: str = Query(None), tab: str = Query("overview")):
-    """Enhanced B2B dashboard with multiple tabs"""
+async def dashboard(
+    request: Request,
+    company_id: str = Query(None), 
+    api_key: str = Query(None), 
+    tab: str = Query("overview"),
+    session_id: str = Cookie(None)
+):
+    """Enhanced B2B dashboard with automatic login handling"""
     
+    # If no company_id provided, try to get from session
+    if not company_id:
+        if session_id and session_id in sessions:
+            company_id = sessions[session_id]["company_id"]
+            # Redirect to clean URL with company_id
+            return RedirectResponse(f"/dashboard?company_id={company_id}&tab={tab}", status_code=302)
+        else:
+            # No session, redirect to login
+            return RedirectResponse("/login", status_code=302)
+    
+    # Validate company exists
     if company_id not in companies_data:
-        raise HTTPException(status_code=404, detail="Company not found")
+        # Company not found, redirect to login with error
+        return RedirectResponse("/login?error=Session expired. Please login again.", status_code=302)
     
     company = companies_data[company_id]
     quota_pct = (company["usage"] / company["quota"]) * 100 if company["quota"] > 0 else 0
@@ -1278,6 +1273,290 @@ async def logout(response: Response):
     response = RedirectResponse("/", status_code=303)
     response.delete_cookie("session_id")
     return response
+
+@app.get("/my-dashboard")
+async def my_dashboard(session_id: str = Cookie(None)):
+    """Shortcut to user's dashboard - finds company automatically"""
+    if session_id and session_id in sessions:
+        company_id = sessions[session_id]["company_id"]
+        return RedirectResponse(f"/dashboard?company_id={company_id}", status_code=302)
+    else:
+        return RedirectResponse("/login?error=Please login to access your dashboard", status_code=302)
+
+@app.get("/", response_class=HTMLResponse)
+async def homepage(session_id: str = Cookie(None)):
+    """Homepage with automatic dashboard link for logged-in users"""
+    
+    # Check if user is logged in
+    user_logged_in = session_id and session_id in sessions
+    user_name = ""
+    dashboard_link = "/login"
+    auth_buttons = """
+        <a href="/register" class="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100">Get Started</a>
+        <a href="/login" class="border border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700">Login</a>
+    """
+    
+    if user_logged_in:
+        company_id = sessions[session_id]["company_id"]
+        if company_id in companies_data:
+            user_name = companies_data[company_id]["name"]
+            dashboard_link = "/my-dashboard"
+            auth_buttons = f"""
+                <a href="/my-dashboard" class="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100">My Dashboard</a>
+                <a href="/logout" class="border border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700">Logout</a>
+            """
+
+    return f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>BlockVerify - Privacy-First Age Verification</title>
+        <style>
+            body {{
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                margin: 0;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                min-height: 100vh;
+            }}
+            .header {{
+                background: rgba(255,255,255,0.1);
+                backdrop-filter: blur(10px);
+                padding: 1rem 2rem;
+                position: sticky;
+                top: 0;
+                z-index: 100;
+            }}
+            .nav {{
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                max-width: 1200px;
+                margin: 0 auto;
+            }}
+            .logo {{
+                font-size: 1.5rem;
+                font-weight: bold;
+            }}
+            .nav-links {{
+                display: flex;
+                gap: 1rem;
+                align-items: center;
+            }}
+            .nav-links a {{
+                text-decoration: none;
+                padding: 0.5rem 1rem;
+                border-radius: 6px;
+                transition: all 0.3s;
+            }}
+            .hero {{
+                text-align: center;
+                padding: 6rem 2rem;
+                max-width: 800px;
+                margin: 0 auto;
+            }}
+            .hero h1 {{
+                font-size: 3.5rem;
+                font-weight: bold;
+                margin-bottom: 1.5rem;
+                line-height: 1.1;
+            }}
+            .hero p {{
+                font-size: 1.25rem;
+                opacity: 0.9;
+                margin-bottom: 3rem;
+                line-height: 1.6;
+            }}
+            .cta-buttons {{
+                display: flex;
+                gap: 1rem;
+                justify-content: center;
+                flex-wrap: wrap;
+            }}
+            .cta-buttons a {{
+                text-decoration: none;
+                padding: 1rem 2rem;
+                border-radius: 8px;
+                font-weight: 600;
+                transition: all 0.3s;
+                display: inline-block;
+            }}
+            .features {{
+                background: rgba(255,255,255,0.05);
+                padding: 4rem 2rem;
+                margin-top: 4rem;
+            }}
+            .features-grid {{
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 2rem;
+                max-width: 1200px;
+                margin: 0 auto;
+            }}
+            .feature {{
+                background: rgba(255,255,255,0.1);
+                padding: 2rem;
+                border-radius: 12px;
+                text-align: center;
+            }}
+            .feature-icon {{
+                font-size: 3rem;
+                margin-bottom: 1rem;
+            }}
+            .stats {{
+                background: rgba(255,255,255,0.05);
+                padding: 3rem 2rem;
+                text-align: center;
+            }}
+            .stats-grid {{
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 2rem;
+                max-width: 800px;
+                margin: 2rem auto 0;
+            }}
+            .stat {{
+                background: rgba(255,255,255,0.1);
+                padding: 1.5rem;
+                border-radius: 8px;
+            }}
+            .stat-number {{
+                font-size: 2.5rem;
+                font-weight: bold;
+                display: block;
+            }}
+            .footer {{
+                background: rgba(0,0,0,0.2);
+                padding: 3rem 2rem;
+                text-align: center;
+                margin-top: 4rem;
+            }}
+            .footer-links {{
+                display: flex;
+                justify-content: center;
+                gap: 2rem;
+                margin-bottom: 2rem;
+                flex-wrap: wrap;
+            }}
+            .footer-links a {{
+                color: white;
+                text-decoration: none;
+                opacity: 0.8;
+            }}
+            .footer-links a:hover {{
+                opacity: 1;
+            }}
+            @media (max-width: 768px) {{
+                .hero h1 {{
+                    font-size: 2.5rem;
+                }}
+                .cta-buttons {{
+                    flex-direction: column;
+                    align-items: center;
+                }}
+                .nav-links {{
+                    flex-direction: column;
+                    gap: 0.5rem;
+                }}
+            }}
+        </style>
+    </head>
+    <body>
+        <header class="header">
+            <nav class="nav">
+                <div class="logo">🔐 BlockVerify</div>
+                <div class="nav-links">
+                    {f"<span style='opacity: 0.8;'>Welcome, {user_name}</span>" if user_logged_in else ""}
+                    {auth_buttons}
+                </div>
+            </nav>
+        </header>
+
+        <main>
+            <section class="hero">
+                <h1>Privacy-First Age Verification</h1>
+                <p>Protect your platform with zero-knowledge age verification. No personal data stored, blockchain-anchored trust, GDPR & COPPA compliant.</p>
+                
+                <div class="cta-buttons">
+                    {"<a href='/my-dashboard' class='bg-yellow-400 text-black px-8 py-4 rounded-lg font-semibold hover:bg-yellow-300'>Go to Dashboard</a>" if user_logged_in else "<a href='/register' class='bg-yellow-400 text-black px-8 py-4 rounded-lg font-semibold hover:bg-yellow-300'>Start Free Trial</a>"}
+                    <a href="/demo" class="border border-white text-white px-8 py-4 rounded-lg font-semibold hover:bg-white hover:text-black">View Demo</a>
+                </div>
+            </section>
+
+            <section class="features">
+                <div class="features-grid">
+                    <div class="feature">
+                        <div class="feature-icon">🛡️</div>
+                        <h3>Privacy-First</h3>
+                        <p>Zero-knowledge verification. No user data stored on your servers. Complete anonymity guaranteed.</p>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">⚡</div>
+                        <h3>Lightning Fast</h3>
+                        <p>Sub-100ms API responses. Built for scale with global CDN and enterprise infrastructure.</p>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">🔗</div>
+                        <h3>Blockchain Trust</h3>
+                        <p>Cryptographically verified on Polygon. Tamper-proof audit trail for compliance.</p>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">📱</div>
+                        <h3>Easy Integration</h3>
+                        <p>Simple JavaScript SDK or REST API. Get up and running in minutes, not hours.</p>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">✅</div>
+                        <h3>Compliance Ready</h3>
+                        <p>GDPR, COPPA, and international privacy law compliant. Legal protection included.</p>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">💰</div>
+                        <h3>Transparent Pricing</h3>
+                        <p>Start with 10,000 free verifications. Pay-as-you-scale with no hidden fees.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="stats">
+                <h2>Trusted by Growing Platforms</h2>
+                <div class="stats-grid">
+                    <div class="stat">
+                        <span class="stat-number">1M+</span>
+                        <span>Verifications</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">500+</span>
+                        <span>Active Sites</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">99.9%</span>
+                        <span>Uptime</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">50ms</span>
+                        <span>Avg Response</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <div class="footer-links">
+                <a href="/register">Get Started</a>
+                <a href="/login">Login</a>
+                <a href="/demo">Demo</a>
+                <a href="/docs">API Docs</a>
+                <a href="/health">Status</a>
+                <a href="mailto:support@blockverify.com">Support</a>
+            </div>
+            <p>&copy; 2024 BlockVerify. Privacy-first age verification.</p>
+        </footer>
+    </body>
+    </html>
+    """
 
 if __name__ == "__main__":
     import uvicorn
