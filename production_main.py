@@ -43,6 +43,17 @@ sessions = {}  # Session management
 password_reset_tokens = {}  # Password reset tokens
 blockchain_records = []  # Blockchain audit trail
 
+# Add debug flag
+DEBUG_MODE = True
+
+def debug_log(message, data=None):
+    """Debug logging function"""
+    if DEBUG_MODE:
+        if data:
+            logger.info(f"🔍 DEBUG: {message} - Data: {data}")
+        else:
+            logger.info(f"🔍 DEBUG: {message}")
+
 # Demo blockchain records
 def init_blockchain_records():
     """Initialize with some demo blockchain records"""
@@ -219,6 +230,15 @@ async def register_company(
 ):
     """Handle B2B registration"""
     
+    # Debug logging
+    debug_log("Registration attempt", {
+        "company_name": company_name,
+        "email": email,
+        "password": f"[{len(password)} chars]",
+        "domain": domain,
+        "industry": industry
+    })
+    
     # Check if email already exists
     for comp in companies_data.values():
         if comp["email"] == email:
@@ -234,13 +254,13 @@ async def register_company(
     company_id = f"comp_{secrets.token_hex(8)}"
     api_key = f"bv_prod_{secrets.token_urlsafe(32)}"
     
-    # Store company data
-    companies_data[company_id] = {
+    # Store company data - FIXED: Make sure password is stored correctly
+    company_data = {
         "id": company_id,
         "name": company_name,
         "email": email,
-        "password": password,  # In production, hash this!
-        "domain": domain,
+        "password": password,  # Store actual password, not default
+        "domain": domain if domain else "",  # Ensure domain is stored correctly
         "industry": industry,
         "api_key": api_key,
         "usage": 0,
@@ -248,7 +268,10 @@ async def register_company(
         "created_at": datetime.now()
     }
     
-    logger.info(f"✅ New B2B registration: {company_name} ({email})")
+    companies_data[company_id] = company_data
+    debug_log("Company stored", company_data)
+    
+    logger.info(f"✅ New B2B registration: {company_name} ({email}) - Password: {len(password)} chars")
     
     # Redirect to dashboard with API key shown once
     return RedirectResponse(f"/dashboard?company_id={company_id}&api_key={api_key}", status_code=303)
@@ -387,30 +410,48 @@ async def dashboard(
                     
                     <h3>Daily Usage (Last 7 Days)</h3>
                     <div class="chart">
-                        <table>
-                            <tr>
-                                <th>Date</th>
-                                <th>API Calls</th>
-                                <th>Success Rate</th>
-                                <th>Avg Response Time</th>
-                            </tr>
-                            {"".join(f'<tr><td>{stat["date"]}</td><td>{stat["calls"]:,}</td><td>99.{i}%</td><td>{20+i}ms</td></tr>' for i, stat in enumerate(daily_stats))}
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #f9fafb;">
+                                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e5e5;">Date</th>
+                                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e5e5;">API Calls</th>
+                                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e5e5;">Success Rate</th>
+                                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e5e5;">Avg Response Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {"".join(f'''<tr>
+                                    <td style="padding: 12px; border-bottom: 1px solid #e5e5e5;">{stat["date"]}</td>
+                                    <td style="padding: 12px; border-bottom: 1px solid #e5e5e5; font-weight: 500;">{stat["calls"]:,}</td>
+                                    <td style="padding: 12px; border-bottom: 1px solid #e5e5e5; color: #16a34a;">99.{i}%</td>
+                                    <td style="padding: 12px; border-bottom: 1px solid #e5e5e5;">{20+i}ms</td>
+                                </tr>''' for i, stat in enumerate(daily_stats))}
+                            </tbody>
                         </table>
                     </div>
                     
                     <h3>Verification Results</h3>
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px;">
-                        <div class="card" style="background: #d1fae5;">
-                            <h4>✅ Valid Adults</h4>
-                            <div class="stat-value">{int(company["usage"] * 0.85):,}</div>
+                        <div style="background: #dcfce7; border: 1px solid #16a34a; padding: 20px; border-radius: 8px; text-align: center;">
+                            <h4 style="color: #16a34a; margin: 0 0 10px 0;">✅ Valid Adults</h4>
+                            <div style="font-size: 2rem; font-weight: bold; color: #16a34a;">{int(company["usage"] * 0.85) if company["usage"] > 0 else 0}</div>
+                            <div style="color: #16a34a; font-size: 0.9rem; margin-top: 5px;">
+                                {((int(company["usage"] * 0.85) / company["usage"]) * 100):.1f}% of total
+                            </div>
                         </div>
-                        <div class="card" style="background: #fee2e2;">
-                            <h4>❌ Minors Blocked</h4>
-                            <div class="stat-value">{int(company["usage"] * 0.10):,}</div>
+                        <div style="background: #fef2f2; border: 1px solid #dc2626; padding: 20px; border-radius: 8px; text-align: center;">
+                            <h4 style="color: #dc2626; margin: 0 0 10px 0;">❌ Minors Blocked</h4>
+                            <div style="font-size: 2rem; font-weight: bold; color: #dc2626;">{int(company["usage"] * 0.10) if company["usage"] > 0 else 0}</div>
+                            <div style="color: #dc2626; font-size: 0.9rem; margin-top: 5px;">
+                                {((int(company["usage"] * 0.10) / company["usage"]) * 100):.1f}% of total
+                            </div>
                         </div>
-                        <div class="card" style="background: #fef3c7;">
-                            <h4>⚠️ Invalid Tokens</h4>
-                            <div class="stat-value">{int(company["usage"] * 0.05):,}</div>
+                        <div style="background: #fefce8; border: 1px solid #ca8a04; padding: 20px; border-radius: 8px; text-align: center;">
+                            <h4 style="color: #ca8a04; margin: 0 0 10px 0;">⚠️ Invalid Tokens</h4>
+                            <div style="font-size: 2rem; font-weight: bold; color: #ca8a04;">{int(company["usage"] * 0.05) if company["usage"] > 0 else 0}</div>
+                            <div style="color: #ca8a04; font-size: 0.9rem; margin-top: 5px;">
+                                {((int(company["usage"] * 0.05) / company["usage"]) * 100):.1f}% of total
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -554,6 +595,17 @@ curl -X POST https://blockverify-api-production.up.railway.app/api/v1/verify-tok
                 <div class="card">
                     <h2>⚙️ Account Settings</h2>
                     
+                    <div style="background: #f0f9ff; border: 1px solid #0ea5e9; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <h4 style="color: #0ea5e9; margin: 0 0 10px 0;">🔍 Debug Info</h4>
+                        <div style="font-family: monospace; font-size: 0.9rem; color: #0369a1;">
+                            <div><strong>Company ID:</strong> {company["id"]}</div>
+                            <div><strong>Email:</strong> {company["email"]}</div>
+                            <div><strong>Password Length:</strong> {len(company.get("password", ""))} characters</div>
+                            <div><strong>Domain:</strong> "{company.get("domain", "")}"</div>
+                            <div><strong>Industry:</strong> {company.get("industry", "")}</div>
+                        </div>
+                    </div>
+                    
                     <h3>Company Information</h3>
                     <form>
                         <div style="margin-bottom: 15px;">
@@ -566,7 +618,7 @@ curl -X POST https://blockverify-api-production.up.railway.app/api/v1/verify-tok
                         </div>
                         <div style="margin-bottom: 15px;">
                             <label>Domain</label><br>
-                            <input type="text" value="{company["domain"] or ""}" placeholder="example.com" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            <input type="text" value="{company.get("domain", "")}" placeholder="example.com" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                         </div>
                         <button type="submit" class="btn">Save Changes</button>
                     </form>
@@ -1129,22 +1181,36 @@ async def login(
     email: str = Form(...),
     password: str = Form(...)
 ):
-    """Handle login"""
+    """Handle login - FIXED password verification"""
+    debug_log("Login attempt", {"email": email, "password": f"[{len(password)} chars]"})
+    
     # Find company by email
     company = None
     company_id = None
     for cid, comp in companies_data.items():
+        debug_log("Checking company", {"id": cid, "email": comp.get("email"), "stored_password": f"[{len(comp.get('password', ''))} chars]"})
         if comp["email"] == email:
             company = comp
             company_id = cid
             break
     
     if not company:
+        debug_log("Company not found for email", email)
         return RedirectResponse("/login?error=Invalid email or password", status_code=303)
     
-    # Check password (in production, use proper password hashing)
-    if company.get("password", "demo123") != password:
-        return RedirectResponse("/login?error=Invalid email or password", status_code=303)
+    # FIXED: Check password properly - no default fallback to demo123
+    stored_password = company.get("password", "")
+    debug_log("Password comparison", {
+        "provided": f"[{len(password)} chars]: '{password}'",
+        "stored": f"[{len(stored_password)} chars]: '{stored_password}'",
+        "match": stored_password == password
+    })
+    
+    if not stored_password or stored_password != password:
+        debug_log("Password mismatch", {"provided": password, "stored": stored_password})
+        return RedirectResponse("/login?error=Invalid email or password - Check your password", status_code=303)
+    
+    debug_log("Login successful", company_id)
     
     # Create session
     session_id = secrets.token_urlsafe(32)
@@ -1557,6 +1623,54 @@ async def homepage(session_id: str = Cookie(None)):
     </body>
     </html>
     """
+
+@app.get("/debug/companies")
+async def debug_companies():
+    """Debug endpoint to see all stored company data"""
+    if not DEBUG_MODE:
+        raise HTTPException(status_code=404, detail="Debug mode disabled")
+    
+    return {
+        "total_companies": len(companies_data),
+        "companies": {
+            company_id: {
+                "name": company.get("name"),
+                "email": company.get("email"),
+                "password_length": len(company.get("password", "")),
+                "password": company.get("password", ""),  # Show actual password for debugging
+                "domain": company.get("domain", ""),
+                "industry": company.get("industry", ""),
+                "created_at": company.get("created_at").isoformat() if company.get("created_at") else None
+            }
+            for company_id, company in companies_data.items()
+        }
+    }
+
+@app.get("/debug/fix-account")
+async def debug_fix_account(email: str = Query(...), new_password: str = Query(...)):
+    """Debug endpoint to manually fix account password"""
+    if not DEBUG_MODE:
+        raise HTTPException(status_code=404, detail="Debug mode disabled")
+    
+    # Find company by email
+    for company_id, company in companies_data.items():
+        if company.get("email") == email:
+            old_password = company.get("password", "")
+            company["password"] = new_password
+            debug_log("Password manually fixed", {
+                "email": email,
+                "old_password": old_password,
+                "new_password": new_password
+            })
+            return {
+                "status": "fixed",
+                "email": email,
+                "old_password": old_password,
+                "new_password": new_password,
+                "message": f"Password updated for {email}"
+            }
+    
+    return {"status": "not_found", "email": email}
 
 if __name__ == "__main__":
     import uvicorn
