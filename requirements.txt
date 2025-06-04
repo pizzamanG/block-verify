@@ -39,4 +39,7 @@ colorama==0.4.6
 
 # Additional production dependencies
 aiofiles==23.2.1
-python-dateutil==2.8.2 
+python-dateutil==2.8.2
+
+# Core API dependencies
+pydantic==2.4.2 
